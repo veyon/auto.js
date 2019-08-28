@@ -14,8 +14,6 @@ import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
 import android.view.OrientationEventListener;
 
 import com.stardust.autojs.runtime.exception.ScriptException;
@@ -25,7 +23,6 @@ import com.stardust.util.ScreenMetrics;
 /**
  * Created by Stardust on 2017/5/17.
  */
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 public class ScreenCapturer {
 
     public static final int ORIENTATION_AUTO = -1;
@@ -113,37 +110,42 @@ public class ScreenCapturer {
             setImageListener(mHandler);
             return;
         }
-        new Thread(() -> {
-            Looper.prepare();
-            mImageAcquireLooper = Looper.myLooper();
-            setImageListener(new Handler());
-            Looper.loop();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Looper.prepare();
+                mImageAcquireLooper = Looper.myLooper();
+                setImageListener(new Handler());
+                Looper.loop();
+            }
         }).start();
     }
 
     private void setImageListener(Handler handler) {
-        mImageReader.setOnImageAvailableListener(reader -> {
-            try {
-                if (mCachedImage != null) {
-                    synchronized (mCachedImageLock) {
-                        if (mCachedImage != null) {
-                            mCachedImage.close();
+        mImageReader.setOnImageAvailableListener( new ImageReader.OnImageAvailableListener() {
+            @Override
+            public void onImageAvailable(ImageReader reader) {
+                try {
+                    if (mCachedImage != null) {
+                        synchronized (mCachedImageLock) {
+                            if (mCachedImage != null) {
+                                mCachedImage.close();
+                            }
+                            mCachedImage = reader.acquireLatestImage();
+                            mImageAvailable = true;
+                            mCachedImageLock.notify();
+                            return;
                         }
-                        mCachedImage = reader.acquireLatestImage();
-                        mImageAvailable = true;
-                        mCachedImageLock.notify();
-                        return;
                     }
+                    mCachedImage = reader.acquireLatestImage();
+                } catch (Exception e) {
+                    mException = e;
                 }
-                mCachedImage = reader.acquireLatestImage();
-            } catch (Exception e) {
-                mException = e;
             }
 
         }, handler);
     }
 
-    @Nullable
     public Image capture() {
         if (!mImageAvailable) {
             waitForImageAvailable();
@@ -181,7 +183,6 @@ public class ScreenCapturer {
         return mScreenDensity;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public void release() {
         if (mImageAcquireLooper != null) {
             mImageAcquireLooper.quit();
