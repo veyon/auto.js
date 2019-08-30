@@ -99,7 +99,7 @@ public class ScreenCapturer {
     }
 
     private void initVirtualDisplay(int width, int height, int screenDensity) {
-        mImageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
+        mImageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3);
         mVirtualDisplay = mMediaProjection.createVirtualDisplay(LOG_TAG,
                 width, height, screenDensity, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 mImageReader.getSurface(), null, null);
